@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>儲值頁面</title>
+    <style>
+        .header {
+            position: relative;
+            top: 20px;
+            left: 22px;
+            font-size: 1.4em;
+            color: #333;
+            margin-bottom: 30%;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            background-color: white;
+        }
+        .container input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .container button {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            background-color: black;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+        .container button:hover {
+            background-color: #333;
+            transform: scale(1.05);
+        }
+        .flex-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .box {
+            width: 48%;
+            height: 50px;
+            border: 0.5px solid black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1em;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+        .box:hover {
+            background-color: #e0e0e0;
+            transform: scale(1.05);
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.5);
+            animation: fadein 0.5s;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            text-align: center;
+            opacity: 0.9;
+            width: 70%;
+        }
+        .modal-content button {
+            background-color: black;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            padding: 10px;
+            margin-top: 10px;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+        .modal-content button:hover {
+            background-color: #333;
+            transform: scale(1.05);
+        }
+        @keyframes fadein {
+            from {opacity: 0;}
+            to {opacity: 1;}
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">𝔑𝔗𝔘𝔐𝔈𝔇 ℭ𝔄𝔐𝔓</div>
+        <h3>儲值暗網</h3>
+        <div class="flex-container">
+            <div class="box">交易界面</div>
+            <div class="box">Crashed</div>
+        </div>
+        <input id="username" type="text" placeholder="儲值帳號名稱">
+        <input id="amount" type="number" placeholder="儲值金額">
+        <button onclick="topUp()">儲值</button>
+    </div>
+    <div class="modal" id="modal">
+        <div class="modal-content" id="modal-content">
+            <p id="balance-info"></p>
+            <button onclick="closeModal()">關閉</button>
+        </div>
+    </div>
+
+    <script>
+        function showModal(message) {
+            const modal = document.getElementById('modal');
+            const balanceInfo = document.getElementById('balance-info');
+            balanceInfo.textContent = message;
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('modal');
+            modal.style.display = 'none';
+        }
+
+        async function updateServerBalance(userName, newBalance) {
+            const url = `https://script.google.com/macros/s/AKfycbxPoiqIEsIRR4rnsrjKzULK3Pm7GevufMIlqQ2rsuORIFBNx7KK_gAWIWELIUL3QolK/exec?action=updateBalance&username=${encodeURIComponent(userName)}&balance=${newBalance}`;
+            const response = await fetch(url);
+            const result = await response.json();
+            return result.success;
+        }
+
+        async function getBalance(userName) {
+            const url = `https://script.google.com/macros/s/AKfycbxPoiqIEsIRR4rnsrjKzULK3Pm7GevufMIlqQ2rsuORIFBNx7KK_gAWIWELIUL3QolK/exec?action=queryBalance&username=${encodeURIComponent(userName)}`;
+            const response = await fetch(url);
+            const result = await response.json();
+            return result.success ? result.balance : 0;
+        }
+
+        async function topUp() {
+            const userName = document.getElementById('username').value;
+            const amount = parseInt(document.getElementById('amount').value, 10);
+            if (!userName || isNaN(amount)) {
+                showModal('請填寫完整的資訊');
+                return;
+            }
+
+            const currentBalance = await getBalance(userName);
+            const newBalance = currentBalance + amount;
+            const success = await updateServerBalance(userName, newBalance);
+            
+            if (success) {
+                showModal(`儲值成功！\n儲值前金額：${currentBalance}\n儲值後金額：${newBalance}`);
+            } else {
+                showModal('儲值失敗，請稍後再試');
+            }
+        }
+
+        document.querySelectorAll('.box').forEach(box => {
+            box.addEventListener('click', (event) => {
+                if (event.target.textContent === '交易界面') {
+                    window.location.href = 'https://jedieason.github.io/Trading-interface/';
+                } else if (event.target.textContent === 'Crashed') {
+                    window.location.href = 'https://jedieason.github.io/Crashed/';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
