@@ -166,11 +166,34 @@
             font-weight: 500;
             color: black;
         }
+        .header-button-row {
+            display: flex;
+            position: absolute;
+            top: 23px;
+            right: 20px;
+            align-items: center;
+            z-index: 1000;
+        }
+        .login-button {
+            color: #fff;
+            background: #000;
+            border-radius: 6px;
+            padding: 3px 6px;
+            font-size: 1em;
+            cursor: pointer;
+            background: none;
+            border: none;
+            outline: none;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">𝔑𝔗𝔘𝔐𝔈𝔇 ℭ𝔄𝔐𝔓</div>
+        <div class="header-button-row">
+            <button class="login-button" id="SignInButton">登入</button>
+            <button class="login-button" id="SignOutButton">登出</button>
+        </div>
         <h3>儲值暗網</h3>
         <div class="flex-container">
             <div class="pleaseclick">點一下啦</div>
@@ -427,6 +450,67 @@
         }
 
         document.querySelector('.pleaseclick').addEventListener('click', uselessWebButton);
+    </script>
+
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
+        // TODO: Add SDKs for Firebase products that you want to use
+        // https://firebase.google.com/docs/web/setup#available-libraries
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyB6NZTH5qHsJahgY7TLlBMjQQvdleYuY7w",
+            authDomain: "auth-f79f5.firebaseapp.com",
+            projectId: "auth-f79f5",
+            storageBucket: "auth-f79f5.appspot.com",
+            messagingSenderId: "543105084905",
+            appId: "1:543105084905:web:09a98504001166b3e26f78"
+        };
+      
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth();
+        const provider = new GoogleAuthProvider();
+
+        const SignInButton = document.getElementById("SignInButton");
+        const SignOutButton = document.getElementById("SignOutButton");
+        const message = document.getElementById("message");
+
+        const userSignIn = async() => {
+            signInWithPopup(auth, provider)
+            .then((result) => {
+                const user = result.user;
+                alert(`歡迎, ${user.displayName}`);
+            }).catch((error) => {
+                const errorCode = error.code;
+                const errorMessage = error.message;
+                console.error(`登入失敗: ${errorCode}, ${errorMessage}`);
+            });
+        };
+
+        const userSignOut = async () => {
+            signOut(auth).then(() => {
+                alert("已成功登出!");
+            }).catch((error) => {
+                console.error(`登出失敗: ${error}`);
+            });
+        };
+
+        SignInButton.addEventListener("click", userSignIn);
+        SignOutButton.addEventListener("click", userSignOut);
+
+        onAuthStateChanged(auth, user => {
+            if(user){
+                SignInButton.style.display = "none";
+                SignOutButton.style.display = "block";
+                message.textContent = `歡迎, ${user.displayName}`;
+            } else {
+                SignInButton.style.display = "block";
+                SignOutButton.style.display = "none";
+                message.textContent = "請登入";
+            }
+        });
     </script>
 </body>
 </html>
