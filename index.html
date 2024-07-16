@@ -38,7 +38,7 @@
             border-radius: 5px;
             font-size: 1em;
         }
-        .container button {
+        .topup-button {
             width: 100%;
             padding: 10px;
             margin: 10px 0;
@@ -50,7 +50,11 @@
             font-size: 1em;
             transition: background-color 0.3s, transform 0.3s;
         }
-        .container button:hover {
+        .topup-button:hover {
+            background-color: #333;
+            transform: scale(1.05);
+        }
+        .login-button:hover {
             background-color: #333;
             transform: scale(1.05);
         }
@@ -172,17 +176,27 @@
             top: 23px;
             right: 20px;
             align-items: center;
-            z-index: 1000;
+            gap: 10px;
         }
         .login-button {
             color: #fff;
             background: #000;
-            border-radius: 6px;
-            padding: 3px 6px;
+            border-radius: 24px;
+            padding: 5px 12px;
             font-size: 1em;
             cursor: pointer;
-            background: none;
             border: none;
+            outline: none;
+        }
+
+        .user-button {
+            color: #333; /* 修改這一行，改為黑色文字 */
+            background: transparent; /* 修改這一行，改為淺灰色背景 */
+            border-radius: 6px;
+            padding: 5px;
+            font-size: 1em;
+            cursor: pointer;
+            border: none; /* 新增這一行，加上邊框 */
             outline: none;
         }
     </style>
@@ -191,10 +205,15 @@
     <div class="container">
         <div class="header">𝔑𝔗𝔘𝔐𝔈𝔇 ℭ𝔄𝔐𝔓</div>
         <div class="header-button-row">
-            <button class="login-button">登入</button>
-            <button class="login-button">登出</button>
+            <button id="userButton" class="user-button"><span id="userName"></span></button>
+            <button id="signInButton" class="login-button">登入</button>
+            <button id="signOutButton" class="login-button">登出</button>
         </div>
-        <h3>儲值暗網</h3>
+
+    <!-- <div id="message">
+        <p>You have signed in as <span id="userName"></span> with the email <span id="userEmail"></span> </p>
+    </div> -->
+    <h3>儲值暗網</h3>
         <div class="flex-container">
             <div class="pleaseclick">點一下啦</div>
         </div>
@@ -204,7 +223,7 @@
         </div>
         <input id="username" type="text" placeholder="儲值帳號名稱">
         <input id="amount" type="number" placeholder="儲值金額">
-        <button onclick="topUp()">儲值</button>
+        <button class="topup-button" id="topUpButton">儲值</button>
     </div>
     <div class="modal" id="modal">
         <div class="modal-content" id="modal-content">
@@ -219,237 +238,318 @@
         <div class="message-text">修蛋幾勒</div>
     </div>
 
-    <script>
-        function showModal(message) {
-            const modal = document.getElementById('modal');
-            const balanceInfo = document.getElementById('balance-info');
-            balanceInfo.textContent = message;
-            modal.style.display = 'flex';
+    <script type="module">
+  
+    // Import the functions you need from the SDKs you need
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
+    // TODO: Add SDKs for Firebase products that you want to use
+    // https://firebase.google.com/docs/web/setup#available-libraries
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
+    // Your web app's Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyB6NZTH5qHsJahgY7TLlBMjQQvdleYuY7w",
+      authDomain: "auth-f79f5.firebaseapp.com",
+      projectId: "auth-f79f5",
+      storageBucket: "auth-f79f5.appspot.com",
+      messagingSenderId: "543105084905",
+      appId: "1:543105084905:web:09a98504001166b3e26f78"
+    };
+ 
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth();
+  const provider = new GoogleAuthProvider()
+
+  const signInButton = document.getElementById("signInButton");
+  const signOutButton = document.getElementById("signOutButton");
+  const topUpButton = document.getElementById("topUpButton");
+  const userButton = document.getElementById("userButton");
+  const message = document.getElementById("message");
+  const userName = document.getElementById("userName");
+
+  signOutButton.style.display = "none";
+  userButton.style.display = "none";
+
+  const userSignIn = async() => {
+    signInWithPopup(auth, provider)
+    .then((result) => {
+        const user = result.user
+        signInButton.style.display = "none";
+        console.log(user);
+    }).catch((error) => {
+        const errorCode = error.code;
+        const errorMessage = error.message
+    })
+  }
+
+  const userSignOut = async() => {
+    signOut(auth).then(() => {
+        signOutButton.style.display = "none";
+        userButton.style.display = "none";
+        signInButton.style.display = "block";
+        showModal("成功登出");
+    }).catch((error) => {})
+  }
+
+  let userEmail = '';
+
+  onAuthStateChanged(auth, (user) => {
+        if (user) {
+            signInButton.style.display = "none"; // 添加這一行
+            signOutButton.style.display = "block";
+            userButton.style.display = "block";
+            userName.innerHTML = user.displayName;
+            userEmail = user.email;
+        } else {
+            signOutButton.style.display = "none";
+        }
+    });
+
+    async function topUp() {
+        if (!checkUserEmail(userEmail)){
+            showModal('請用學校email登入');
+            return;
+        }
+        const userName = document.getElementById('username').value;
+        const amount = parseInt(document.getElementById('amount').value, 10);
+        if (!userName || isNaN(amount)) {
+            showModal('請填寫完整的資訊');
+            return;
         }
 
-        function closeModal() {
-            const modal = document.getElementById('modal');
-            modal.style.display = 'none';
-        }
+        showLoading();
 
-        async function updateServerBalance(userName, newBalance) {
-            const url = `https://script.google.com/macros/s/AKfycbxPoiqIEsIRR4rnsrjKzULK3Pm7GevufMIlqQ2rsuORIFBNx7KK_gAWIWELIUL3QolK/exec?action=updateBalance&username=${encodeURIComponent(userName)}&balance=${newBalance}`;
-            const response = await fetch(url);
-            const result = await response.json();
-            return result.success;
-        }
+        try {
+            const currentBalance = await getBalance(userName);
+            const newBalance = currentBalance + amount;
+            const success = await updateServerBalance(userName, newBalance);
 
-        async function getBalance(userName) {
-            const url = `https://script.google.com/macros/s/AKfycbxPoiqIEsIRR4rnsrjKzULK3Pm7GevufMIlqQ2rsuORIFBNx7KK_gAWIWELIUL3QolK/exec?action=queryBalance&username=${encodeURIComponent(userName)}`;
-            const response = await fetch(url);
-            const result = await response.json();
-            return result.success ? result.balance : 0;
-        }
+            hideLoading();
 
-        function showLoading() {
-            const loadingMessage = document.getElementById('loadingMessage');
-            loadingMessage.style.display = 'flex';
-            setTimeout(() => {
-                loadingMessage.style.opacity = '1';
-            }, 10);
-        }
-
-        function hideLoading() {
-            const loadingMessage = document.getElementById('loadingMessage');
-            loadingMessage.style.opacity = '0';
-            setTimeout(() => {
-                loadingMessage.style.display = 'none';
-            }, 500);
-        }
-
-        async function topUp() {
-            const userName = document.getElementById('username').value;
-            const amount = parseInt(document.getElementById('amount').value, 10);
-            if (!userName || isNaN(amount)) {
-                showModal('請填寫完整的資訊');
-                return;
-            }
-
-            showLoading();
-
-            try {
-                const currentBalance = await getBalance(userName);
-                const newBalance = currentBalance + amount;
-                const success = await updateServerBalance(userName, newBalance);
-
-                hideLoading();
-
-                if (success) {
-                    showModal(`儲值成功！\n儲值前金額：${currentBalance}\n儲值後金額：${newBalance}`);
-                } else {
-                    showModal('儲值失敗，請稍後再試');
-                }
-            } catch (error) {
-                hideLoading();
+            if (success) {
+                showModal(`儲值成功！\n儲值前金額：${currentBalance}\n儲值後金額：${newBalance}`);
+            } else {
                 showModal('儲值失敗，請稍後再試');
             }
+        } catch (error) {
+            hideLoading();
+            showModal('儲值失敗，請稍後再試');
         }
+    }
 
-        document.querySelectorAll('.box').forEach(box => {
-            box.addEventListener('click', (event) => {
-                if (event.target.textContent === '交易界面') {
-                    window.location.href = 'https://jedieason.github.io/Trading-interface/';
-                } else if (event.target.textContent === 'Crashed') {
-                    window.location.href = 'https://jedieason.github.io/Crashed/';
-                }
-            });
+
+  signInButton.addEventListener('click', userSignIn);
+  signOutButton.addEventListener('click', userSignOut);
+  topUpButton.addEventListener('click', topUp);
+
+
+  
+</script>
+<script>
+    async function updateServerBalance(userName, newBalance) {
+        const url = `https://script.google.com/macros/s/AKfycbxPoiqIEsIRR4rnsrjKzULK3Pm7GevufMIlqQ2rsuORIFBNx7KK_gAWIWELIUL3QolK/exec?action=updateBalance&username=${encodeURIComponent(userName)}&balance=${newBalance}`;
+        const response = await fetch(url);
+        const result = await response.json();
+        return result.success;
+    }
+
+    async function getBalance(userName) {
+        const url = `https://script.google.com/macros/s/AKfycbxPoiqIEsIRR4rnsrjKzULK3Pm7GevufMIlqQ2rsuORIFBNx7KK_gAWIWELIUL3QolK/exec?action=queryBalance&username=${encodeURIComponent(userName)}`;
+        const response = await fetch(url);
+        const result = await response.json();
+        return result.success ? result.balance : 0;
+    }
+
+    function showModal(message) {
+        const modal = document.getElementById('modal');
+        const balanceInfo = document.getElementById('balance-info');
+        balanceInfo.textContent = message;
+        modal.style.display = 'flex';
+    }
+
+    function closeModal() {
+        const modal = document.getElementById('modal');
+        modal.style.display = 'none';
+    }
+
+    function showLoading() {
+        const loadingMessage = document.getElementById('loadingMessage');
+        loadingMessage.style.display = 'flex';
+        setTimeout(() => {
+            loadingMessage.style.opacity = '1';
+        }, 10);
+    }
+
+    function hideLoading() {
+        const loadingMessage = document.getElementById('loadingMessage');
+        loadingMessage.style.opacity = '0';
+        setTimeout(() => {
+            loadingMessage.style.display = 'none';
+        }, 500);
+    }
+
+    document.querySelectorAll('.box').forEach(box => {
+        box.addEventListener('click', (event) => {
+            if (event.target.textContent === '交易界面') {
+                window.location.href = 'https://jedieason.github.io/Trading-interface/';
+            } else if (event.target.textContent === 'Crashed') {
+                window.location.href = 'https://jedieason.github.io/Crashed/';
+            }
         });
+    });
 
-        function detectDevToolsAndRespond() {
-            let devtools = false;
-            const threshold = 160;
+    function checkUserEmail(userEmail) {
+    const regex = /^(b12401\d{3}|b11401\d{3})@g\.ntu\.edu\.tw$/;
+    return regex.test(userEmail);
+}
 
-            function stopExecution() {
-                document.body.innerHTML = '<h1>你不可以作弊😡</h1>';
-                setTimeout(function() {
-                    window.location.href = 'https://youtu.be/dQw4w9WgXcQ';
-                }, 2000);
-            }
+    function detectDevToolsAndRespond() {
+        let devtools = false;
+        const threshold = 160;
 
-            function isMobile() {
-                return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            }
+        function stopExecution() {
+            document.body.innerHTML = '<h1>你不可以作弊😡</h1>';
+            setTimeout(function() {
+                window.location.href = 'https://youtu.be/dQw4w9WgXcQ';
+            }, 2000);
+        }
 
-            function checkDevTools() {
-                const widthThreshold = window.outerWidth - window.innerWidth > threshold;
-                const heightThreshold = window.outerHeight - window.innerHeight > threshold;
+        function isMobile() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        }
 
-                if (
-                    !(widthThreshold && heightThreshold) &&
-                    ((window.Firebug && window.Firebug.chrome && window.Firebug.chrome.isInitialized) || widthThreshold || heightThreshold)
-                ) {
-                    if (!devtools) {
-                        devtools = true;
-                        stopExecution();
-                    }
-                } else {
-                    devtools = false;
+        function checkDevTools() {
+            const widthThreshold = window.outerWidth - window.innerWidth > threshold;
+            const heightThreshold = window.outerHeight - window.innerHeight > threshold;
+
+            if (
+                !(widthThreshold && heightThreshold) &&
+                ((window.Firebug && window.Firebug.chrome && window.Firebug.chrome.isInitialized) || widthThreshold || heightThreshold)
+            ) {
+                if (!devtools) {
+                    devtools = true;
+                    stopExecution();
                 }
-            }
-
-            if (!isMobile()) {
-                // 每秒檢查一次
-                setInterval(checkDevTools, 1000);
             } else {
-                console.log('在移動設備上，不執行開發者工具檢測');
+                devtools = false;
             }
         }
 
-        // 使用方法
-        detectDevToolsAndRespond();
-
-        function uselessWebButton() {
-            var sitesList = [
-                'https://sliding.toys/mystic-square/8-puzzle/daily/',
-                'https://longdogechallenge.com/',
-                'https://maze.toys/mazes/mini/daily/',
-                'https://optical.toys',
-                'https://paint.toys/',
-                'https://puginarug.com',
-                'https://alwaysjudgeabookbyitscover.com',
-                'https://clicking.toys/flip-grid/neat-nine/3-holes/',
-                'https://weirdorconfusing.com/',
-                'https://checkbox.toys/scale/',
-                'https://memory.toys/classic/easy/',
-                'https://binarypiano.com/',
-                'https://mondrianandme.com/',
-                'https://onesquareminesweeper.com/',
-                'https://cursoreffects.com',
-                'http://floatingqrcode.com/',
-                'https://thatsthefinger.com/',
-                'https://cant-not-tweet-this.com/',
-                'http://heeeeeeeey.com/',
-                'http://corndog.io/',
-                'http://eelslap.com/',
-                'http://www.staggeringbeauty.com/',
-                'http://burymewithmymoney.com/',
-                'https://smashthewalls.com/',
-                'https://jacksonpollock.org/',
-                'http://endless.horse/',
-                'http://drawing.garden/',
-                'https://www.trypap.com/',
-                'http://www.republiquedesmangues.fr/',
-                'http://www.movenowthinklater.com/',
-                'https://sliding.toys/klotski/easy-street/',
-                'https://paint.toys/calligram/',
-                'https://checkboxrace.com/',
-                'http://www.rrrgggbbb.com/',
-                'http://www.koalastothemax.com/',
-                'https://rotatingsandwiches.com/',
-                'http://www.everydayim.com/',
-                'http://randomcolour.com/',
-                'http://maninthedark.com/',
-                'http://cat-bounce.com/',
-                'http://chrismckenzie.com/',
-                'https://thezen.zone/',
-                'http://ninjaflex.com/',
-                'http://ihasabucket.com/',
-                'http://corndogoncorndog.com/',
-                'http://www.hackertyper.com/',
-                'https://pointerpointer.com',
-                'http://imaninja.com/',
-                'http://www.partridgegetslucky.com/',
-                'http://www.ismycomputeron.com/',
-                'http://www.nullingthevoid.com/',
-                'http://www.muchbetterthanthis.com/',
-                'http://www.yesnoif.com/',
-                'http://lacquerlacquer.com',
-                'http://potatoortomato.com/',
-                'http://iamawesome.com/',
-                'https://strobe.cool/',
-                'http://thisisnotajumpscare.com/',
-                'http://doughnutkitten.com/',
-                'http://crouton.net/',
-                'http://corgiorgy.com/',
-                'http://www.wutdafuk.com/',
-                'http://unicodesnowmanforyou.com/',
-                'http://chillestmonkey.com/',
-                'http://scroll-o-meter.club/',
-                'http://www.crossdivisions.com/',
-                'http://tencents.info/',
-                'https://boringboringboring.com/',
-                'http://www.patience-is-a-virtue.org/',
-                'http://pixelsfighting.com/',
-                'http://isitwhite.com/',
-                'https://existentialcrisis.com/',
-                'http://onemillionlols.com/',
-                'http://www.omfgdogs.com/',
-                'http://oct82.com/',
-                'http://chihuahuaspin.com/',
-                'http://www.blankwindows.com/',
-                'http://tunnelsnakes.com/',
-                'http://www.trashloop.com/',
-                'http://spaceis.cool/',
-                'http://www.doublepressure.com/',
-                'http://www.donothingfor2minutes.com/',
-                'http://buildshruggie.com/',
-                'http://yeahlemons.com/',
-                'http://wowenwilsonquiz.com',
-                'http://notdayoftheweek.com/',
-                'http://www.amialright.com/',
-                'https://optical.toys/thatcher-effect/',
-                'https://greatbignothing.com/',
-                'https://zoomquilt.org/',
-                'https://dadlaughbutton.com/',
-                'https://remoji.com/',
-                'http://papertoilet.com/',
-                'https://loopedforinfinity.com/',
-                'https://end.city/',
-                'https://www.bouncingdvdlogo.com/',
-                'https://clicking.toys/peg-solitaire/english/',
-                'https://toms.toys',
-            ];
-
-            var randomSite = sitesList[Math.floor(Math.random() * sitesList.length)];
-            window.open(randomSite, '_blank');
+        if (!isMobile()) {
+            setInterval(checkDevTools, 1000);
+        } else {
+            console.log('在移動設備上，不執行開發者工具檢測');
         }
+    }
 
-        document.querySelector('.pleaseclick').addEventListener('click', uselessWebButton);
-    </script>
+    detectDevToolsAndRespond();
+
+    function uselessWebButton() {
+        var sitesList = [
+            'https://sliding.toys/mystic-square/8-puzzle/daily/',
+            'https://longdogechallenge.com/',
+            'https://maze.toys/mazes/mini/daily/',
+            'https://optical.toys',
+            'https://paint.toys/',
+            'https://puginarug.com',
+            'https://alwaysjudgeabookbyitscover.com',
+            'https://clicking.toys/flip-grid/neat-nine/3-holes/',
+            'https://weirdorconfusing.com/',
+            'https://checkbox.toys/scale/',
+            'https://memory.toys/classic/easy/',
+            'https://binarypiano.com/',
+            'https://mondrianandme.com/',
+            'https://onesquareminesweeper.com/',
+            'https://cursoreffects.com',
+            'http://floatingqrcode.com/',
+            'https://thatsthefinger.com/',
+            'https://cant-not-tweet-this.com/',
+            'http://heeeeeeeey.com/',
+            'http://corndog.io/',
+            'http://eelslap.com/',
+            'http://www.staggeringbeauty.com/',
+            'http://burymewithmymoney.com/',
+            'https://smashthewalls.com/',
+            'https://jacksonpollock.org/',
+            'http://endless.horse/',
+            'http://drawing.garden/',
+            'https://www.trypap.com/',
+            'http://www.republiquedesmangues.fr/',
+            'http://www.movenowthinklater.com/',
+            'https://sliding.toys/klotski/easy-street/',
+            'https://paint.toys/calligram/',
+            'https://checkboxrace.com/',
+            'http://www.rrrgggbbb.com/',
+            'http://www.koalastothemax.com/',
+            'https://rotatingsandwiches.com/',
+            'http://www.everydayim.com/',
+            'http://randomcolour.com/',
+            'http://maninthedark.com/',
+            'http://cat-bounce.com/',
+            'http://chrismckenzie.com/',
+            'https://thezen.zone/',
+            'http://ninjaflex.com/',
+            'http://ihasabucket.com/',
+            'http://corndogoncorndog.com/',
+            'http://www.hackertyper.com/',
+            'https://pointerpointer.com',
+            'http://imaninja.com/',
+            'http://www.partridgegetslucky.com/',
+            'http://www.ismycomputeron.com/',
+            'http://www.nullingthevoid.com/',
+            'http://www.muchbetterthanthis.com/',
+            'http://www.yesnoif.com/',
+            'http://lacquerlacquer.com',
+            'http://potatoortomato.com/',
+            'http://iamawesome.com/',
+            'https://strobe.cool/',
+            'http://thisisnotajumpscare.com/',
+            'http://doughnutkitten.com/',
+            'http://crouton.net/',
+            'http://corgiorgy.com/',
+            'http://www.wutdafuk.com/',
+            'http://unicodesnowmanforyou.com/',
+            'http://chillestmonkey.com/',
+            'http://scroll-o-meter.club/',
+            'http://www.crossdivisions.com/',
+            'http://tencents.info/',
+            'https://boringboringboring.com/',
+            'http://www.patience-is-a-virtue.org/',
+            'http://pixelsfighting.com/',
+            'http://isitwhite.com/',
+            'https://existentialcrisis.com/',
+            'http://onemillionlols.com/',
+            'http://www.omfgdogs.com/',
+            'http://oct82.com/',
+            'http://chihuahuaspin.com/',
+            'http://www.blankwindows.com/',
+            'http://tunnelsnakes.com/',
+            'http://www.trashloop.com/',
+            'http://spaceis.cool/',
+            'http://www.doublepressure.com/',
+            'http://www.donothingfor2minutes.com/',
+            'http://buildshruggie.com/',
+            'http://yeahlemons.com/',
+            'http://wowenwilsonquiz.com',
+            'http://notdayoftheweek.com/',
+            'http://www.amialright.com/',
+            'https://optical.toys/thatcher-effect/',
+            'https://greatbignothing.com/',
+            'https://zoomquilt.org/',
+            'https://dadlaughbutton.com/',
+            'https://remoji.com/',
+            'http://papertoilet.com/',
+            'https://loopedforinfinity.com/',
+            'https://end.city/',
+            'https://www.bouncingdvdlogo.com/',
+            'https://clicking.toys/peg-solitaire/english/',
+            'https://toms.toys',
+        ];
+
+        var randomSite = sitesList[Math.floor(Math.random() * sitesList.length)];
+        window.open(randomSite, '_blank');
+    }
+
+    document.querySelector('.pleaseclick').addEventListener('click', uselessWebButton);
+</script>
 </body>
 </html>
